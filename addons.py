@@ -12,7 +12,7 @@ import zipfile
 
 from six.moves import input  # pylint: disable=redefined-builtin
 
-from utils import namemap, slugify, CACHE, FileNotFoundError, get_version
+from utils import namemap, slugify, CACHE, FileNotFoundError, get_version, VERSIONMAP
 
 
 # TODO Windows different versions go to different places
@@ -70,11 +70,18 @@ latest = json.load(CACHE.getfd(LATESTURL, refresh_age=60))
 for slug, info in ADDONS.items():
     if slug in latest and 'version' in ADDONS[slug]:
         ver, url = latest[slug]
-        print('Match found in database: {}'.format(slug))
-        print('Installed version:     "{}"'.format(get_version(ADDONS[slug]['version'])))
-        print('Latest version:        "{}"'.format(get_version(ver)))
+        instver = get_version(ADDONS[slug]['version'])
+        latestver = get_version(ver)
 
-        if get_version(ADDONS[slug]['version']) != get_version(ver):
+        if slug in VERSIONMAP and instver in VERSIONMAP[slug]:
+            instver = VERSIONMAP[slug][instver]
+
+
+        print('Match found in database: {}'.format(slug))
+        print('Installed version:     "{}"'.format(instver))
+        print('Latest version:        "{}"'.format(latestver))
+
+        if instver != latestver:
             if not args.yes:
                 yn = input('Would you like to upgrade {} from {}? [Y/n] '.format(slug, url))
             if args.yes or yn is "" or yn.startswith('y') or yn.startswith('Y'):

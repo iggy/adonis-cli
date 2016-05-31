@@ -27,6 +27,15 @@ NAMEMAP = {
     'aucadvanced': 'auctioneer',
 }
 # TODO version map... for things like altoholic that report version r165, but are actually 6.2.007
+# should probably be something downloaded so it's uptodate
+VERSIONMAP = {
+    'altoholic': {
+        '165': '6.2.007',
+    },
+    'auctioneer': {
+        '5.21f.5579': '5.21f',
+    }
+}
 
 
 class Cache(object):
