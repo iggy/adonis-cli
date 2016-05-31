@@ -38,9 +38,10 @@ ADDONS = CACHE.load()
 #     del ADDONS[key]
 
 # scan through the most recent addons on curse.com
-RCNTURLS = ['http://mods.curse.com/addons/wow/updated',
+RCNTURLS = [
+            'http://mods.curse.com/addons/wow/updated',
             'http://mods.curse.com/addons/wow/downloads',
-            'http://mods.curse.com/addons/wow/new',]
+            'http://mods.curse.com/addons/wow/new',
             # 'http://mods.curse.com/addons/wow',
             # 'http://mods.curse.com/addons/wow?page=2',
             # 'http://mods.curse.com/addons/wow?page=3',
@@ -52,9 +53,9 @@ RCNTURLS = ['http://mods.curse.com/addons/wow/updated',
             # 'http://mods.curse.com/addons/wow?page=9',
             # 'http://mods.curse.com/addons/wow?page=10',
             # 'http://mods.curse.com/addons/wow?page=11',
-            # ]
+            ]
 
-del(ADDONS['auctioneer'])
+# del(ADDONS['auctioneer'])
 
 s = requests.Session()
 for RCNTURL in RCNTURLS:
@@ -86,6 +87,9 @@ for RCNTURL in RCNTURLS:
             except requests.exceptions.ReadTimeout:
                 print('Read timeout: Internet connected?')
                 sys.exit(1)
+            except ConnectionResetError:
+                print('Connection reset, skipping')
+                continue
             ao_soup = BeautifulSoup(ao_resp.text, "html.parser")
 
             det = ao_soup.find('div', class_='main-details')
