@@ -13,6 +13,7 @@
 # six
 from __future__ import print_function
 
+import argparse
 import datetime
 import json
 import os.path
@@ -30,12 +31,23 @@ from utils import slugify, CACHE, get_version
 
 ADDONS = CACHE.load()
 
+parser = argparse.ArgumentParser(description='Generate database of data about addons.')
+parser.add_argument('-w', dest='wipe', action='store_true', default=False,
+                    help='Wipe existing data')
+parser.add_argument('-a', dest='age', action='store_true', default=False,
+                    help='Age out random selection of existing data')
+args = parser.parse_args()
+
 # age out random records
 # TODO handle aging out records correctly
-print("Aging 10 random entries out.")
-for key in random.sample(ADDONS.keys(), 10):
-    print('Delete key: {}'.format(key))
-    del ADDONS[key]
+if args.wipe:
+    for key in ADDONS.keys():
+        del ADDONS[key]
+elif args.age:
+    print("Aging 30 random entries out.")
+    for key in random.sample(ADDONS.keys(), 30):
+        print('Delete key: {}'.format(key))
+        del ADDONS[key]
 
 # scan through the most recent addons on curse.com
 RCNTURLS = [
