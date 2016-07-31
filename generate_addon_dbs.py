@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
+'''Find addon info online and generate info databases
 
-# find addon info online and generate info databases
-
-# I know all this screen scraping is bad for the curse site (and my soul), but they leave me no
-# other option
-
-# most recently updated list
-# http://mods.curse.com/addons/wow/updated
-#
-
-# Requirments:
-# six
+I know all this screen scraping is bad for the curse site (and my soul), but they leave me no
+other option
+'''
+# pylint: disable=invalid-name, no-name-in-module, line-too-long, fixme
 from __future__ import print_function
 
 import argparse
@@ -18,13 +12,18 @@ import datetime
 import json
 import os.path
 import random
-import requests
-import shutil
 import sys
 import time
-from bs4 import BeautifulSoup
-from pprint import pprint
 from urllib.parse import urljoin
+
+try:
+    import requests
+except ImportError:
+    sys.exit("Please install requests: pip3 install requests")
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    sys.exit("Please install BeautifulSoup: pip3 install beautifulsoup4")
 
 from utils import slugify, CACHE, get_version
 
@@ -47,13 +46,10 @@ if args.age:
         del ADDONS[key]
 
 # scan through the most recent addons on curse.com
-RCNTBASEURLS = [
-            'http://mods.curse.com/addons/wow/updated',
-            'http://mods.curse.com/addons/wow/downloads',
-            'http://mods.curse.com/addons/wow/new',
-            'http://mods.curse.com/addons/wow',
-            ]
-
+RCNTBASEURLS = ['http://mods.curse.com/addons/wow/updated',
+                'http://mods.curse.com/addons/wow/downloads',
+                'http://mods.curse.com/addons/wow/new',
+                'http://mods.curse.com/addons/wow']
 RCNTURLS = []
 for baseurls in RCNTBASEURLS:
     for page in range(1, 10):

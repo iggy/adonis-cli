@@ -17,6 +17,10 @@ To just update everything automatically:
 
 `./addons.py -y`
 
+To see a report of addons:
+
+`./addons.py -r`
+
 ## TODO
 
 * Do more than just upgrade

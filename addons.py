@@ -1,7 +1,13 @@
 #!/usr/bin/python
 '''Search local dirs for AddOns
 Check for new version online
-Update local'''
+Update local
+
+TODO
+cache cleanup
+better addon path searching
+'''
+# pylint: disable=invalid-name
 from __future__ import print_function
 
 import argparse
@@ -10,19 +16,21 @@ import os
 import platform
 import zipfile
 
-from six.moves import input  # pylint: disable=redefined-builtin
+try:
+    from six.moves import input  # pylint: disable=redefined-builtin
+except ImportError:
+    sys.exit("Please install six: pip install six")
 
 from utils import namemap, slugify, CACHE, FileNotFoundError, get_version, VERSIONMAP
 
 
-# TODO Windows different versions go to different places
-plat = platform.system()
-if plat == "Darwin":
+platname = platform.system()
+if platname == "Darwin":
     ADDDIR = "/Applications/World of Warcraft/Interface/AddOns/"
-elif plat == "Windows":
+elif platname == "Windows":
     ADDDIR = ""
 
-LATESTURL = "https://iggy.ninja/latest.json"
+LATESTURL = "https://adonis.iggy.ninja/latest.json"
 
 ADDONS = {}
 # most of these are ignored because they are bliz built-ins or they are part of "bundles"
@@ -41,12 +49,12 @@ IGNOREDADDONS = ['vuhdooptions', 'masterplana', 'msbtoptions', 'enchantrix-barke
                  'altoholic_achievements', 'altoholic_summary', 'altoholic_search',
                  'altoholic_guild', 'altoholic_grids', 'altoholic_characters', 'altoholic_agenda',]
 
-parser = argparse.ArgumentParser(description='Check for and update WoW addons.')
-parser.add_argument('-y', dest='yes', action='store_true', default=False,
-                    help='Answer yes to prompts')
-parser.add_argument('-r', dest='report', action='store_true', default=False,
-                    help='Report available upgrades only (no changes)')
-args = parser.parse_args()
+aparser = argparse.ArgumentParser(description='Check for and update WoW addons.')
+aparser.add_argument('-y', dest='yes', action='store_true', default=False,
+                     help='Answer yes to prompts')
+aparser.add_argument('-r', dest='report', action='store_true', default=False,
+                     help='Report available upgrades only (no changes)')
+pargs = aparser.parse_args()
 
 for ent in os.listdir(ADDDIR):
     slug = namemap(slugify(ent))
@@ -83,10 +91,10 @@ for slug, info in ADDONS.items():
         print('Installed version:         {}'.format(instver))
         print('Latest version:            {}'.format(latestver))
 
-        if instver != latestver and args.report == False:
-            if args.yes == False:
+        if instver != latestver and pargs.report is False:
+            if pargs.yes is False:
                 yn = input('Would you like to upgrade {} from {}? [Y/n] '.format(slug, url))
-            if args.yes or yn is "" or yn.startswith('y') or yn.startswith('Y'):
+            if pargs.yes or yn is "" or yn.startswith('y') or yn.startswith('Y'):
                 # do the upgrade
                 print('Upgrading {} from {}, please wait...'.format(slug, url))
                 ufd = CACHE.get(url)
