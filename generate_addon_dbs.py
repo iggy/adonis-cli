@@ -32,27 +32,27 @@ ADDONS = CACHE.load()
 
 # age out random records
 # TODO handle aging out records correctly
-# print("Aging 8 random entries out.")
-# for key in random.sample(ADDONS.keys(), 8):
-#     print('Delete key: {}'.format(key))
-#     del ADDONS[key]
+print("Aging 10 random entries out.")
+for key in random.sample(ADDONS.keys(), 10):
+    print('Delete key: {}'.format(key))
+    del ADDONS[key]
 
 # scan through the most recent addons on curse.com
 RCNTURLS = [
             'http://mods.curse.com/addons/wow/updated',
             'http://mods.curse.com/addons/wow/downloads',
             'http://mods.curse.com/addons/wow/new',
-            # 'http://mods.curse.com/addons/wow',
-            # 'http://mods.curse.com/addons/wow?page=2',
-            # 'http://mods.curse.com/addons/wow?page=3',
-            # 'http://mods.curse.com/addons/wow?page=4',
-            # 'http://mods.curse.com/addons/wow?page=5',
-            # 'http://mods.curse.com/addons/wow?page=6',
-            # 'http://mods.curse.com/addons/wow?page=7',
-            # 'http://mods.curse.com/addons/wow?page=8',
-            # 'http://mods.curse.com/addons/wow?page=9',
-            # 'http://mods.curse.com/addons/wow?page=10',
-            # 'http://mods.curse.com/addons/wow?page=11',
+            'http://mods.curse.com/addons/wow',
+            'http://mods.curse.com/addons/wow?page=2',
+            'http://mods.curse.com/addons/wow?page=3',
+            'http://mods.curse.com/addons/wow?page=4',
+            'http://mods.curse.com/addons/wow?page=5',
+            'http://mods.curse.com/addons/wow?page=6',
+            'http://mods.curse.com/addons/wow?page=7',
+            'http://mods.curse.com/addons/wow?page=8',
+            'http://mods.curse.com/addons/wow?page=9',
+            'http://mods.curse.com/addons/wow?page=10',
+            'http://mods.curse.com/addons/wow?page=11',
             ]
 
 # del(ADDONS['auctioneer'])
@@ -82,6 +82,7 @@ for RCNTURL in RCNTURLS:
             print('Processing {}'.format(slug))
             name = li.a.text
             ao_url = urljoin(RCNTURL, li.a['href'])
+            # print(ao_url)
             try:
                 ao_resp = s.get(ao_url)
             except requests.exceptions.ReadTimeout:
@@ -95,6 +96,9 @@ for RCNTURL in RCNTURLS:
             det = ao_soup.find('div', class_='main-details')
 
             cfurl = det.find('li', class_='curseforge').a.get('href')
+            if cfurl[0:2] == '//':
+                # They started returning url's without http(s)
+                cfurl = "http:" + cfurl
             cfresp = s.get(cfurl)
             cfsoup = BeautifulSoup(cfresp.text, 'html.parser')
 
