@@ -7,13 +7,14 @@ TODO
 cache cleanup
 better addon path searching
 '''
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, redefined-builtin, no-name-in-module
 from __future__ import print_function
 
 import argparse
 import json
 import os
 import platform
+import sys
 import zipfile
 
 try:

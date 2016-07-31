@@ -1,6 +1,7 @@
 '''Some utility functions for the addon scripts
 
 '''
+# pylint disable=redefined-builtin
 from __future__ import print_function
 
 import datetime
