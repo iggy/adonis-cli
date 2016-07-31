@@ -44,6 +44,8 @@ IGNOREDADDONS = ['vuhdooptions', 'masterplana', 'msbtoptions', 'enchantrix-barke
 parser = argparse.ArgumentParser(description='Check for and update WoW addons.')
 parser.add_argument('-y', dest='yes', action='store_true', default=False,
                     help='Answer yes to prompts')
+parser.add_argument('-r', dest='report', action='store_true', default=False,
+                    help='Report available upgrades only (no changes)')
 args = parser.parse_args()
 
 for ent in os.listdir(ADDDIR):
@@ -77,12 +79,12 @@ for slug, info in ADDONS.items():
             instver = VERSIONMAP[slug][instver]
 
 
-        print('Match found in database: {}'.format(slug))
-        print('Installed version:     "{}"'.format(instver))
-        print('Latest version:        "{}"'.format(latestver))
+        print('Match found in database:   {}'.format(slug))
+        print('Installed version:         {}'.format(instver))
+        print('Latest version:            {}'.format(latestver))
 
-        if instver != latestver:
-            if not args.yes:
+        if instver != latestver and args.report == False:
+            if args.yes == False:
                 yn = input('Would you like to upgrade {} from {}? [Y/n] '.format(slug, url))
             if args.yes or yn is "" or yn.startswith('y') or yn.startswith('Y'):
                 # do the upgrade
