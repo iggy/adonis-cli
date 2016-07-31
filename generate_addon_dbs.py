@@ -40,10 +40,7 @@ args = parser.parse_args()
 
 # age out random records
 # TODO handle aging out records correctly
-if args.wipe:
-    for key in ADDONS.keys():
-        del ADDONS[key]
-elif args.age:
+if args.age:
     print("Aging 30 random entries out.")
     for key in random.sample(ADDONS.keys(), 30):
         print('Delete key: {}'.format(key))
@@ -87,7 +84,7 @@ for RCNTURL in RCNTURLS:
         for li in titles:
             # process each addon page
             slug = slugify(li.find('a').get('href').split('/')[-1])
-            if slug in ADDONS:
+            if slug in ADDONS and not args.wipe:
                 # TODO we are just skipping if the data is already there, we need a way to age out old
                 # data/freshen/etc
                 continue
