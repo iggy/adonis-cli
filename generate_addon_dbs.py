@@ -28,7 +28,7 @@ except ImportError:
 from utils import slugify, CACHE, get_version
 
 
-ADDONS = CACHE.load()
+ADDONS = CACHE.load() or {}
 
 parser = argparse.ArgumentParser(description='Generate database of data about addons.')
 parser.add_argument('-w', dest='wipe', action='store_true', default=False,
@@ -60,7 +60,7 @@ for RCNTURL in RCNTURLS:
     COUNT = 20
     resp = s.get(RCNTURL)
     soup = BeautifulSoup(resp.text, "html.parser")
-    print('Page: {}'.format(soup.title.text))
+    print('Page: {} ({})'.format(soup.title.text, RCNTURL))
 
     # there are basically 2 different page styles, but thankfully they are really close
     titles = soup.find_all("td", class_="title") or soup.find_all("li", class_="title")

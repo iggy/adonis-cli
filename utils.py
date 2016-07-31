@@ -52,6 +52,8 @@ class Cache(object):
         '''get a file from a local cache or fetch it from a url'''
         filename = os.path.split(url)[-1]
         filepath = os.path.join(self.cachedir, 'download', filename)
+        if not os.path.isdir(os.path.join(self.cachedir, 'download')):
+            os.mkdir(os.path.join(self.cachedir, 'download'))
         if refresh_age and os.path.isfile(filepath):
             new_enough = datetime.datetime.now() - datetime.timedelta(seconds=-refresh_age)
             if datetime.datetime.fromtimestamp(os.stat(filepath).st_mtime) < new_enough:
@@ -77,7 +79,7 @@ class Cache(object):
         '''load pickled data from previous runs... we don't need no stinking databases'''
         if os.path.isfile(self.picklefile):
             with open(self.picklefile, 'rb') as pick:
-                return pickle.load(pick) or {}
+                return pickle.load(pick)
 
     def dump(self, data):
         '''put data into the pickle file in the cache directory'''
