@@ -47,24 +47,17 @@ if args.age:
         del ADDONS[key]
 
 # scan through the most recent addons on curse.com
-RCNTURLS = [
+RCNTBASEURLS = [
             'http://mods.curse.com/addons/wow/updated',
             'http://mods.curse.com/addons/wow/downloads',
             'http://mods.curse.com/addons/wow/new',
             'http://mods.curse.com/addons/wow',
-            'http://mods.curse.com/addons/wow?page=2',
-            'http://mods.curse.com/addons/wow?page=3',
-            'http://mods.curse.com/addons/wow?page=4',
-            'http://mods.curse.com/addons/wow?page=5',
-            'http://mods.curse.com/addons/wow?page=6',
-            'http://mods.curse.com/addons/wow?page=7',
-            'http://mods.curse.com/addons/wow?page=8',
-            'http://mods.curse.com/addons/wow?page=9',
-            'http://mods.curse.com/addons/wow?page=10',
-            'http://mods.curse.com/addons/wow?page=11',
             ]
 
-# del(ADDONS['auctioneer'])
+RCNTURLS = []
+for baseurls in RCNTBASEURLS:
+    for page in range(1, 10):
+        RCNTURLS.append("{}?page={}".format(baseurls, page))
 
 s = requests.Session()
 for RCNTURL in RCNTURLS:
@@ -85,8 +78,7 @@ for RCNTURL in RCNTURLS:
             # process each addon page
             slug = slugify(li.find('a').get('href').split('/')[-1])
             if slug in ADDONS and not args.wipe:
-                # TODO we are just skipping if the data is already there, we need a way to age out old
-                # data/freshen/etc
+                # TODO we need a way to automatically age out old data/freshen/etc
                 continue
             print('Processing {}'.format(slug))
             name = li.a.text
