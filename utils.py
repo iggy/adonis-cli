@@ -1,7 +1,7 @@
 '''Some utility functions for the addon scripts
 
 '''
-# pylint disable=redefined-builtin
+# pylint: disable=redefined-builtin
 from __future__ import print_function
 
 import datetime
@@ -20,21 +20,31 @@ except NameError:
     FileNotFoundError = IOError
 
 COMPILEDRE = re.compile(r"\W*")
-REPLRE = re.compile('(\W*)(Release|Beta|Alpha|\(.*?\)|^v)(\W*)', re.I)
+REPLRE = re.compile('(\W*)(Release|Beta|Alpha|\(.*?\)|^v)(\W*)', re.I)  # pylint: disable=anomalous-backslash-in-string
 
 # map server names to local names
 NAMEMAP = {
     'titan': 'titanpanel',
     'aucadvanced': 'auctioneer',
 }
-# TODO version map... for things like altoholic that report version r165, but are actually 6.2.007
+# version map... for things like altoholic that report version r165, but are actually 6.2.007
 # should probably be something downloaded so it's uptodate
 VERSIONMAP = {
     'altoholic': {
         '165': '6.2.007',
+        '170': '7.0.005',
     },
     'auctioneer': {
         '5.21f.5579': '5.21f',
+    },
+    'datastore':{
+        '58': '6.0.002'
+    },
+    'datastore_containers': {
+        '53': '6.0.002'
+    },
+    'datastore_characters': {
+        '36': '6.0.002'
     }
 }
 
