@@ -86,6 +86,8 @@ def process_page(s, rcnturl, li):
         'datetime': datetime.datetime.now(),
     }
 
+    return addon
+
 
 def main():
     addons = CACHE.load() or {}
