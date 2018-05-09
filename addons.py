@@ -1,12 +1,14 @@
 #!/usr/bin/python
-'''Search local dirs for AddOns
+"""Main code for Adonis CLI client.
+
+Search local dirs for AddOns
 Check for new version online
 Update local
 
 TODO
 cache cleanup
 better addon path searching
-'''
+"""
 # pylint: disable=invalid-name, redefined-builtin, no-name-in-module
 from __future__ import print_function
 
@@ -48,13 +50,16 @@ IGNOREDADDONS = ['vuhdooptions', 'masterplana', 'msbtoptions', 'enchantrix-barke
                  'auc-stat-stddev', 'auc-stat-simple', 'auc-util-fixah', 'auc-stat-purchased',
                  'auc-stat-ilevel', 'auc-stat-histogram', 'auc-scandata', 'auc-filter-basic',
                  'altoholic_achievements', 'altoholic_summary', 'altoholic_search',
-                 'altoholic_guild', 'altoholic_grids', 'altoholic_characters', 'altoholic_agenda',]
+                 'altoholic_guild', 'altoholic_grids', 'altoholic_characters', 'altoholic_agenda',
+                 ]  # pylint: disable=C0330
 
 aparser = argparse.ArgumentParser(description='Check for and update WoW addons.')
 aparser.add_argument('-y', dest='yes', action='store_true', default=False,
                      help='Answer yes to prompts')
 aparser.add_argument('-r', dest='report', action='store_true', default=False,
                      help='Report available upgrades only (no changes)')
+aparser.add_argument('-v', dest='verbose', action='store_true', default=False,
+                     help='Be verbose')
 pargs = aparser.parse_args()
 
 for ent in os.listdir(ADDDIR):
@@ -79,6 +84,8 @@ for ent in os.listdir(ADDDIR):
 latest = json.load(CACHE.getfd(LATESTURL, refresh_age=60))
 
 for slug, info in ADDONS.items():
+    if pargs.verbose:
+        print('Processing: ', slug)
     if slug in latest and 'version' in ADDONS[slug]:
         ver, url = latest[slug]
         instver = get_version(ADDONS[slug]['version'])
@@ -87,15 +94,15 @@ for slug, info in ADDONS.items():
         if slug in VERSIONMAP and instver in VERSIONMAP[slug]:
             instver = VERSIONMAP[slug][instver]
 
-
-        print('Match found in database:   {}'.format(slug))
-        print('Installed version:         {}'.format(instver))
-        print('Latest version:            {}'.format(latestver))
+        if pargs.verbose or (pargs.report and instver != latestver):
+            print('Match found in database:   {}'.format(slug))
+            print('Installed version:         {}'.format(instver))
+            print('Latest version:            {}'.format(latestver))
 
         if instver != latestver and pargs.report is False:
             if pargs.yes is False:
                 yn = input('Would you like to upgrade {} from {}? [Y/n] '.format(slug, url))
-            if pargs.yes or yn is "" or yn.startswith('y') or yn.startswith('Y'):
+            if pargs.yes or (yn == "" or yn.startswith('y') or yn.startswith('Y')):
                 # do the upgrade
                 print('Upgrading {} from {}, please wait...'.format(slug, url))
                 ufd = CACHE.get(url)

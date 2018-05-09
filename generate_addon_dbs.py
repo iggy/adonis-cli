@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-'''Find addon info online and generate info databases
+"""Find addon info online and generate info databases.
 
 I know all this screen scraping is bad for the curse site (and my soul), but they leave me no
 other option
-'''
-# pylint: disable=invalid-name, no-name-in-module, line-too-long, fixme
+"""
+# pylint: disable=invalid-name, no-name-in-module, line-too-long, fixme, R0914
 import argparse
 import datetime
 import json
@@ -26,71 +26,121 @@ except ImportError:
 
 from utils import slugify, CACHE, get_version
 
+RCNTBASEURLS = ['http://mods.curse.com/addons/wow/updated',
+                'http://mods.curse.com/addons/wow/downloads',
+                'http://mods.curse.com/addons/wow/new',
+                'http://mods.curse.com/addons/wow']
 
 LOG = logging.getLogger(__name__)
 
-def process_page(s, rcnturl, li):
-    name = li.a.text
-    ao_url = urljoin(rcnturl, li.a['href'])
+
+def process_page(s, url, li):
+    """Process a page from our data source.
+
+    s = request object
+    url = the url of the page... can we get this out of the request object somehow?
+    li = the addon entry, we get the name and addon url from this
+    """
+    # name = li.a.text
+    ao_url = urljoin(url, li.a['href'])
     LOG.info(ao_url)
     try:
         ao_resp = s.get(ao_url)
-    except requests.exceptions.ReadTimeout:
+    except requests.exceptions.Timeout:  # requests.exceptions.ReadTimeout too new
         LOG.error('Read timeout: Internet connected?')
         sys.exit(1)
     except ConnectionResetError:
         LOG.error('Connection reset, skipping')
         return None
+
     ao_soup = BeautifulSoup(ao_resp.text, "html.parser")
 
-    det = ao_soup.find('div', class_='main-details')
+    lic_url = 'curse_changed_formats_again'
+    try:
+        lic_name = ao_soup.find('li', class_='license').text.split(':')[-1].strip()
+    except AttributeError:
+        LOG.error("Unable to find the license info: %s", ao_url)
+        lic_name = 'NOT FOUND'
 
-    cfurl = det.find('li', class_='curseforge').a.get('href')
-    if cfurl[0:2] == '//':
-        # They started returning url's without http(s)
-        cfurl = "http:" + cfurl
-    cfresp = s.get(cfurl)
-    cfsoup = BeautifulSoup(cfresp.text, 'html.parser')
-
-    # the curseforge page has an info pane with a lot of stuff we want
-    cfip = cfsoup.find('div', class_='lastUnit')
-    cfdl = urljoin(cfresp.url, cfip.find('li', class_='user-action-download').a.get('href'))
-    # cffacts = cfip.find('div', class_='content-box-inner')
-    cffacts = cfip.find('h3', text='Facts').parent
-    # this gets us a unix timestamp for created date
-    cfcreated = cffacts.find('dt', text="Date created").find_next('dd').span.get('data-epoch')
-    cfupdated = cffacts.find('dt', text="Last update").find_next('dd').span.get('data-epoch')
-    cflicurl = cffacts.find('a', class_='license').get('href')
-    cflicname = cffacts.find('a', class_='license').text
-
-    # find the most recent download
-    # TODO older releases, notes, etc
-    cfdlresp = s.get(cfdl)
-    cfdlsoup = BeautifulSoup(cfdlresp.text, 'html.parser')
-    cfdlfile = cfdlsoup.find('li', class_='user-action-download').a.get('href')
-    CACHE.get(cfdlfile)
+    try:
+        obf_file_url = ao_soup.find(class_='download-large').find('a').get('href')
+        obf_dl_resp = s.get(urljoin(url, obf_file_url))
+        if obf_dl_resp.status_code == 404:
+            LOG.debug("404 when fetching the download link...")
+            return None
+        # LOG.debug(obf_dl_resp)
+        obf_dl_soup = BeautifulSoup(obf_dl_resp.text, 'html.parser')
+        # LOG.debug(obf_dl_soup)
+        file_dl = obf_dl_soup.find('a', class_='download-link').get('data-href')
+        CACHE.get(file_dl, session=s)
+    except AttributeError:
+        LOG.debug("Unable to find download link: %s", ao_url)
+        # LOG.error(s)
+        # LOG.error(url)
+        # LOG.error(li)
+        # LOG.error(ao_soup)
+        return None
 
     # TODO need more ways of getting tags
     addon = {
-        'name': name,
-        'tags': [det.find('a', class_='main-category').get('title')],
-        'authors': [x.li.a.text for x in det.find_all('ul', class_='authors')],
-        'wowver': det.find('li', class_='version').text.split(' ')[-1],
-        'forge': det.find('li', class_='curseforge').a.get('href'),
-        'relqual': det.find('li', class_='release').text.split(' ')[-1],
-        'latest': get_version(det.find('li', class_='newest-file').text),
-        'created': cfcreated,
-        'updated': cfupdated,
-        'license': (cflicname, cflicurl),
-        'download': cfdlfile,
+        'name': ao_soup.head.find('meta', property='og:title').get('content'),
+        'tags': [ao_soup.find('a', class_='main-category').get('title')],
+        'authors': [x.a.text for x in ao_soup.find('ul', class_='authors').find_all('li')],
+        'wowver': ao_soup.find('li', class_='version').text.split(' ')[-1],
+        'forge': ao_soup.find('li', class_='curseforge').a.get('href'),
+        'relqual': ao_soup.find('li', class_='release').text.split(' ')[-1],
+        'latest': get_version(ao_soup.find('li', class_='newest-file').text.split(':')[-1].strip()),
+        'created': ao_soup.find_all('li', class_='updated')[1].find('abbr').get('data-epoch'),
+        'updated': ao_soup.find_all('li', class_='updated')[0].find('abbr').get('data-epoch'),
+        'license': (lic_name, lic_url),
+        'download': file_dl,
         'datetime': datetime.datetime.now(),
     }
 
     return addon
 
 
+def age_out(addons):
+    """Age out a random sampling of older DB entries.
+
+    There's probably a better way to do this, but the thinking is this runs often enough that
+    everything should get aged out properly eventually.
+    """
+    LOG.info("Aging 30 random entries out.")
+    try:
+        for key in random.sample(addons.keys(), 30):
+            LOG.info('Delete key: %s', key)
+            del addons[key]
+    except ValueError:
+        LOG.error("failed to age out (probably due to too small sample size), continuing anyway")
+
+
+def clean_up_addons(addons):
+    """Housekeeping."""
+    # We got some bad data in the pickle at one point
+    slugs_to_delete = []
+    for slug, addon in addons.items():
+        if 'mods.curse.com' in addon['download']:
+            slugs_to_delete.append(slug)
+    for slug in slugs_to_delete:
+        del addons[slug]
+
+
+def build_url_list():
+    """Build up a list of URLs to check.
+
+    This basically just adds a bunch of pages to a base list of URLs
+    """
+    url_list = []
+    for baseurls in RCNTBASEURLS:
+        for page in range(1, 10):
+            url_list.append("{}?page={}".format(baseurls, page))
+    return url_list
+
+
 def main():
-    addons = CACHE.load() or {}
+    """Main function to generate the addon database."""
+    addons = CACHE.load()
 
     parser = argparse.ArgumentParser(description='Generate database of data about addons.')
     parser.add_argument('-w', dest='wipe', action='store_true', default=False,
@@ -98,7 +148,9 @@ def main():
     parser.add_argument('-a', dest='age', action='store_true', default=False,
                         help='Age out random selection of existing data')
     parser.add_argument('-l', dest='log', action='store', default="WARNING",
-                        help='Set logging level')
+                        help='Set logging level (INFO|DEBUG|Etc)')
+    parser.add_argument('-c', dest='count', action='store', default=20,
+                        help='Number of URLs to process')
     args = parser.parse_args()
 
     nlevel = getattr(logging, args.log.upper())
@@ -107,35 +159,26 @@ def main():
     logging.basicConfig(level=nlevel)
 
     # age out random records
-    # TODO handle aging out records correctly
     if args.age:
-        LOG.info("Aging 30 random entries out.")
-        for key in random.sample(addons.keys(), 30):
-            LOG.info('Delete key: {}'.format(key))
-            del addons[key]
+        age_out(addons)
+
+    clean_up_addons(addons)
 
     # scan through the most recent addons on curse.com
-    rcntbaseurls = ['http://mods.curse.com/addons/wow/updated',
-                    'http://mods.curse.com/addons/wow/downloads',
-                    'http://mods.curse.com/addons/wow/new',
-                    'http://mods.curse.com/addons/wow']
-    rcnturls = []
-    for baseurls in rcntbaseurls:
-        for page in range(1, 10):
-            rcnturls.append("{}?page={}".format(baseurls, page))
+    urls = build_url_list()
 
     s = requests.Session()
-    for rcnturl in rcnturls:
-        count = 20
-        resp = s.get(rcnturl)
+    for url in urls:
+        count = int(args.count)
+        resp = s.get(url)
         soup = BeautifulSoup(resp.text, "html.parser")
-        LOG.info('Page: {} ({})'.format(soup.title.text, rcnturl))
+        LOG.info('Page: %s (%s)', soup.title.text, url)
 
         # there are basically 2 different page styles, but thankfully they are really close
         titles = soup.find_all("td", class_="title") or soup.find_all("li", class_="title")
 
         if not titles:
-            LOG.error('Something bad happened parsing {}'.format(rcnturl))
+            LOG.error('Something bad happened parsing %s', url)
             LOG.error(resp.text)
 
         try:
@@ -145,8 +188,9 @@ def main():
                 if slug in addons and not args.wipe:
                     # TODO we need a way to automatically age out old data/freshen/etc
                     continue
-                LOG.info('Processing {}'.format(slug))
-                addon = process_page(s, rcnturl, li)
+                LOG.info('Processing %s', slug)
+                addon = process_page(s, url, li)
+                LOG.debug(addon)
                 if addon:
                     addons[slug] = addon
 
@@ -154,13 +198,14 @@ def main():
                 if count is 0:
                     break
                 # random sleep to throw off any scraping countermeasures they may have
-                srt = random.randrange(1, 4)
-                time.sleep(srt)
+                time.sleep(random.randrange(1, 4))
         except (KeyboardInterrupt, requests.exceptions.ConnectionError):
             # we still want to save everything we've done...
             # if we get a ctrl-c in here, it probably means I saw something I didn't like
             # if we get a conn error, it probably means we're being rate-limited
-            pass
+            LOG.debug("Caught an interrupt or conn err, saving work.")
+            break
+        LOG.debug("Addons: %s", addons)
 
     CACHE.dump(addons)
 
@@ -168,9 +213,13 @@ def main():
     # aren't constantly downloading a huge file
     latest = {}
     for slug, info in addons.items():
+        LOG.debug("slug: %s", slug)
+        LOG.debug("info: %s", info)
         latest[slug] = (info['latest'], info['download'])
     with open(os.path.join(CACHE.cachedir, 'latest.json'), 'wt') as jsonout:
-        json.dump(latest, jsonout)
+        LOG.debug("Lastest: %s", latest)
+        json.dump(latest, jsonout, indent=4)
+
 
 if __name__ == '__main__':
     main()
